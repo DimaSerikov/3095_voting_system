@@ -29,7 +29,15 @@
 <main class="flex-shrink-0">
     <div class="container">
         <h1>Vote for your favorite option</h1>
-        <div id="options"></div>
+        
+        <div class="panel">
+            <div id="options"></div>
+            <div>
+                <button onclick="downloadResults('application/json')">Download JSON</button>
+                <button onclick="downloadResults('application/xml')">Download XML</button>
+                <button onclick="downloadResults('text/html')">Download HTML</button>
+            </div>
+        </div>
 
         <h2>Voting Results</h2>
         <div id="results"></div>

@@ -1,33 +1,35 @@
 async function getVariants() {
-  const response = await fetch('/3095_voting_system/variants');
+  const response = await fetch('/variants');
   const variants = await response.json();
 
   const optionsDiv = document.getElementById('options');
 
   optionsDiv.innerHTML = '';
-  
-  variants.forEach((variant) => {
 
+  Object.entries(variants).forEach(([key, data]) => {
     const button = document.createElement('button');
 
-    button.classList.add('btn', 'btn-primary', 'm-2');
-    button.textContent = variant.text;
-    button.style.backgroundColor = variant.text
-    button.style.borderColor = variant.text
-    button.onclick = () => vote(variant.code);
+    Object.assign(button, {
+      className: 'btn btn-primary m-2',
+      textContent: data.text,
+      onclick: () => vote(key)
+    });
+    
+    button.style.backgroundColor = `#${key}`
+    button.style.borderColor = `#${key}`
 
     optionsDiv.appendChild(button);
   });
 }
 
 async function getStats() {
-  const response = await fetch('/3095_voting_system/stat', {method: 'POST'});
+  const response = await fetch('/stat', {method: 'POST'});
 
   return await response.json();
 }
 
 async function vote(code) {
-  await fetch('/3095_voting_system/vote', {
+  await fetch('/vote', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ code })
@@ -41,27 +43,31 @@ let votingChart;
 async function renderChart() {
   const backgroundColor = [];
   const borderColor = [];
+  const dataLabels = [];
+  const datasetsData = [];
 
   const stats = await getStats();
 
-  for (const [code, count] of Object.entries(stats)) {
-    backgroundColor.push(`#${code}`);
-    borderColor.push(`#${code}`)
-  }
+  Object.entries(stats).forEach(([key, data]) => {
+    backgroundColor.push(`#${key}`);
+    borderColor.push(`#${key}`)
+    dataLabels.push(data.text)
+    datasetsData.push(data.cnt)
+  });
 
   const ctx = document.getElementById('myChart').getContext('2d');
 
   if (votingChart) {
     votingChart.destroy();
   }
-
+  
   votingChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: Object.keys(stats),
+      labels: dataLabels,
       datasets: [{
         label: 'Number of Votes',
-        data: Object.values(stats),
+        data: datasetsData,
         backgroundColor,
         borderColor,
         borderWidth: 1
@@ -86,5 +92,35 @@ async function renderChart() {
   });
 }
 
-getVariants();
-renderChart();
+async function downloadResults(format) {
+  const response = await fetch('/results', {
+    headers: {
+      'Accept': format
+    }
+  });
+
+  const content = await response.text();
+  const blob = new Blob([content], { type: format });
+
+  const link = document.createElement('a');
+
+  const formatExtensions = {
+    'application/json': 'json',
+    'application/xml': 'xml',
+    'text/html': 'html'
+  };
+
+  const extension = formatExtensions[format] || 'txt';
+  const fileName = `voting_results_${Date.now()}.${format.split('/')[1]}.${extension}`;
+
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  link.click();
+}
+
+async function init() {
+  await getVariants();
+  await renderChart();
+}
+
+init();
